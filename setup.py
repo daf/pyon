@@ -30,7 +30,8 @@ setup(  name = 'pyon',
                  'timer_plugin=pyon.util.timer_plugin:TestTimer',
                  'insulate=pyon.util.insulate:Insulate',
                  'insulateslave=pyon.util.insulate:InsulateSlave',
-                 'gevent_profiler=pyon.util.nose_gevent_profiler:TestGeventProfiler'
+                 'gevent_profiler=pyon.util.nose_gevent_profiler:TestGeventProfiler',
+                 'randomize=pyon.util.random_plugin:Randomize'
              ],
             'console_scripts' : [
                 'pycc=scripts.pycc:entry',
