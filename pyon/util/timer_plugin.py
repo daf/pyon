@@ -35,6 +35,8 @@ from time import time
 
 import nose
 from nose.plugins.base import Plugin
+import gc
+import resource
 
 
 class TestTimer(Plugin):
@@ -77,11 +79,15 @@ class TestTimer(Plugin):
         #d = sorted(self._timed_tests.iteritems(), key=operator.itemgetter(1))
         #for test, time_taken in d:
         for x in self._timed_tests:
-            test, time_taken = x
-            stream.writeln("%s: %0.4f" % (test, time_taken))
+            #stream.writeln("%s: %0.4f" % (test, time_taken))
+            stream.writeln("%s" % ",".join((str(y) for y in x)))
 
     def _register_time(self, test):
-        self._timed_tests.append((test.id(), self._timeTaken()))
+        # get a cpu times sample
+        res = resource.getrusage(resource.RUSAGE_SELF)
+        gc0, gc1, gc2 = gc.get_count()
+        gt0, gt1, gt2 = gc.get_threshold()
+        self._timed_tests.append((test.id(), self._timeTaken(), gc0, gc1, gc2, gt0, gt1, gt2, res.ru_maxrss * 1024))
 
     def addError(self, test, err, capt=None):
         self._register_time(test)
