@@ -31,7 +31,8 @@ setup(  name = 'pyon',
                  'insulate=pyon.util.insulate:Insulate',
                  'insulateslave=pyon.util.insulate:InsulateSlave',
                  'gevent_profiler=pyon.util.nose_gevent_profiler:TestGeventProfiler',
-                 'randomize=pyon.util.random_plugin:Randomize'
+                 'randomize=pyon.util.random_plugin:Randomize',
+                 'objgraph=pyon.util.nose_objgraph:ObjGraph',
              ],
             'console_scripts' : [
                 'pycc=scripts.pycc:entry',
@@ -48,6 +49,7 @@ setup(  name = 'pyon',
         test_suite = 'pyon',
         package_data = {'': ['*.xml']},
         install_requires = [
+            'objgraph==1.7.1',
             # Patched greenlet to work on ARMS
             'greenlet==0.3.1-p1',
             'gevent==0.13.6',
