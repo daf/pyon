@@ -349,10 +349,8 @@ class RecvChannel(BaseChannel):
     _consumer_exclusive = False
     _consumer_no_ack    = False     # endpoint layers do the acking as they call recv()
 
-    # RecvChannel specific FSM states, inputs
-    S_CONSUMING         = 'CONSUMING'
-    I_START_CONSUME     = 'START_CONSUME'
-    I_STOP_CONSUME      = 'STOP_CONSUME'
+    # consuming flag (consuming is not a state, a property)
+    _consuming          = False
 
     def __init__(self, name=None, binding=None, **kwargs):
         """
@@ -372,11 +370,6 @@ class RecvChannel(BaseChannel):
         self._discard_incoming = False
 
         BaseChannel.__init__(self, **kwargs)
-
-        # setup RecvChannel specific state transitions
-        self._fsm.add_transition(self.I_START_CONSUME, self.S_ACTIVE, self._on_start_consume, self.S_CONSUMING)
-        self._fsm.add_transition(self.I_STOP_CONSUME, self.S_CONSUMING, self._on_stop_consume, self.S_ACTIVE)
-        self._fsm.add_transition(self.I_CLOSE, self.S_CONSUMING, self._on_close_while_consume, self.S_CLOSED)
 
     def setup_listener(self, name=None, binding=None):
         """
@@ -463,9 +456,11 @@ class RecvChannel(BaseChannel):
 
         setup_listener must have been called first.
         """
-        self._fsm.process(self.I_START_CONSUME)
+        if not self._consuming:
+            self._consuming = True
+            self._on_start_consume()
 
-    def _on_start_consume(self, fsm):
+    def _on_start_consume(self):
         """
         Starts consuming messages.
 
@@ -490,9 +485,11 @@ class RecvChannel(BaseChannel):
 
         If the queue has auto_delete, this will delete it.
         """
-        self._fsm.process(self.I_STOP_CONSUME)
+        if self._consuming:
+            self._on_stop_consume()
+            self._consuming = False
 
-    def _on_stop_consume(self, fsm):
+    def _on_stop_consume(self):
         """
         Stops consuming messages.
 
@@ -522,8 +519,7 @@ class RecvChannel(BaseChannel):
 
         If consuming, stops it. Otherwise, no-op.
         """
-        if self._fsm.current_state == self.S_CONSUMING:
-            self.stop_consume()
+        self.stop_consume()
 
     def recv(self, timeout=None):
         """
@@ -698,7 +694,6 @@ class ListenChannel(RecvChannel):
     """
 
     # States, Inputs for ListenChannel FSM
-    S_STOPPING      = 'STOPPING'
     S_CLOSING       = 'CLOSING'
     S_ACCEPTED      = 'ACCEPTED'
     I_ENTER_ACCEPT  = 'ENTER_ACCEPT'
@@ -718,12 +713,10 @@ class ListenChannel(RecvChannel):
         RecvChannel.__init__(self, name=name, binding=binding, **kwargs)
 
         # setup ListenChannel specific state transitions
-        self._fsm.add_transition(self.I_ENTER_ACCEPT,   self.S_CONSUMING,   None, self.S_ACCEPTED)
-        self._fsm.add_transition(self.I_EXIT_ACCEPT,    self.S_ACCEPTED,    None, self.S_CONSUMING)
+        self._fsm.add_transition(self.I_ENTER_ACCEPT,   self.S_ACTIVE,      None, self.S_ACCEPTED)
+        self._fsm.add_transition(self.I_EXIT_ACCEPT,    self.S_ACCEPTED,    None, self.S_ACTIVE)
         self._fsm.add_transition(self.I_CLOSE,          self.S_ACCEPTED,    None, self.S_CLOSING)
         self._fsm.add_transition(self.I_EXIT_ACCEPT,    self.S_CLOSING,     self._on_close_while_accepted,  self.S_CLOSED)
-        self._fsm.add_transition(self.I_STOP_CONSUME,   self.S_ACCEPTED,    None, self.S_STOPPING)
-        self._fsm.add_transition(self.I_EXIT_ACCEPT,    self.S_STOPPING,    self._on_stop_consume_while_accepted, self.S_ACTIVE)
 
     def _create_accepted_channel(self, amq_chan, msg):
         """
@@ -749,7 +742,7 @@ class ListenChannel(RecvChannel):
         """
         Handles the delayed closing of a channel after the accept context has been exited.
         """
-        self._on_stop_consume(fsm)
+        self.stop_consume()
         self._on_close(fsm)
 
     def _on_stop_consume_while_accepted(self, fsm):
