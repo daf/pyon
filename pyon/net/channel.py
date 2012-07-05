@@ -198,6 +198,9 @@ class BaseChannel(object):
             amq_chan = self._amq_chan
             amq_chan.close()
 
+            # set to None now so nothing else tries to use the channel during the callback
+            self._amq_chan = None
+
             # PIKA BUG: in v0.9.5, this amq_chan instance will be left around in the callbacks
             # manager, and trips a bug in the handler for on_basic_deliver. We attempt to clean
             # up for Pika here so we don't goof up when reusing a channel number.
@@ -561,6 +564,9 @@ class RecvChannel(BaseChannel):
 
         self._recv_queue.put(ChannelShutdownMessage())
 
+        # if we were consuming, we aren't anymore
+        self.stop_consume()
+
         BaseChannel.close_impl(self)
 
     def _declare_queue(self, queue):
@@ -638,6 +644,7 @@ class RecvChannel(BaseChannel):
         """
         assert self._recv_name and self._recv_name.queue
         #log.debug("RecvChannel.get_stats: %s", self._recv_name.queue)
+        self._ensure_amq_chan()
 
         return self._transport.get_stats(self._amq_chan, queue=self._recv_name.queue)
 
@@ -647,6 +654,7 @@ class RecvChannel(BaseChannel):
         """
         assert self._recv_name and self._recv_name.queue
         #log.debug("RecvChannel.purge: %s", self._recv_name.queue)
+        self._ensure_amq_chan()
 
         return self._transport.purge(self._amq_chan, queue=self._recv_name.queue)
 
