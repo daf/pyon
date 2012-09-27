@@ -159,11 +159,13 @@ class Container(BaseContainerAgent):
         self._capabilities.append("STATE_REPOSITORY")
 
         # ZeroMQ internal router/context for zmq
+        """
         zc = zmq.Context(1)
         self.zmq_router = ZeroMQRouter(zc, bootstrap.get_sys_name())
         self.zmq_router.start()
         self.zmq_router.ready.wait(timeout=2)
         self._capabilities.append("ZMQ_ROUTER")
+        """
 
         # Start ExchangeManager, which starts the node (broker connection)
         self.ex_manager.start()
