@@ -138,6 +138,9 @@ class ProcManager(object):
 
         process_start_mode = get_safe(config, "process.start_mode")
 
+        # alert we have a spawning process, but we don't have the instance yet, so give the class instead (more accurate than name)
+        self._call_proc_state_changed("%s.%s" % (module, cls), ProcessStateEnum.PENDING)
+
         service_instance = None
         try:
             # spawn service by type
@@ -171,6 +174,9 @@ class ProcManager(object):
             if process_type == 'immediate':
                 log.info('Terminating immediate process: %s', service_instance.id)
                 self.terminate_process(service_instance.id)
+
+                # terminate process also triggers TERMINATING/TERMINATED
+                self._call_proc_state_changed(service_instance, ProcessStateEnum.EXITED)
 
             return service_instance.id
 
@@ -235,16 +241,7 @@ class ProcManager(object):
 #            log.warn("svc %s not found in procs list", svc)
 #            return
 
-        self.container.event_pub.publish_event(event_type="ProcessLifecycleEvent",
-            origin=svc.id,
-            origin_type="ContainerProcess",
-            sub_type="ERROR",
-            container_id=self.container.id,
-            process_type=svc._proc_type,
-            process_name=svc._proc_name,
-            state=ProcessStateEnum.ERROR)
-
-        self._call_proc_state_changed(svc, ProcessStateEnum.ERROR)
+        self._call_proc_state_changed(svc, ProcessStateEnum.FAILED)
 
         self.container.fail_fast("Container process (%s) failed: %s" % (svc, gproc.exception))
 
@@ -687,17 +684,7 @@ class ProcManager(object):
                     def_id=service_instance.agent_def_id,
                     capabilities=caps))
 
-        # Trigger a real-time event. At this time, everything persistent has to be completed and consistent.
-        self.container.event_pub.publish_event(event_type="ProcessLifecycleEvent",
-            origin=service_instance.id,
-            origin_type="ContainerProcess",
-            sub_type="SPAWN",
-            container_id=self.container.id,
-            process_type=service_instance._proc_type,
-            process_name=service_instance._proc_name,
-            state=ProcessStateEnum.SPAWN)
-
-        self._call_proc_state_changed(service_instance, ProcessStateEnum.SPAWN)
+        self._call_proc_state_changed(service_instance, ProcessStateEnum.RUNNING)
 
 
     def terminate_process(self, process_id):
@@ -711,6 +698,8 @@ class ProcManager(object):
 
         log.info("ProcManager.terminate_process: %s -> pid=%s", service_instance._proc_name, process_id)
 
+        self._call_proc_state_changed(service_instance, ProcessStateEnum.TERMINATING)
+
         # Give the process notice to quit doing stuff.
         service_instance.quit()
 
@@ -721,16 +710,7 @@ class ProcManager(object):
 
         self._unregister_process(process_id, service_instance)
 
-        # Send out real-time notice that process was terminated. At this point, everything persistent
-        # has to be consistent.
-        self.container.event_pub.publish_event(event_type="ProcessLifecycleEvent",
-            origin=service_instance.id, origin_type="ContainerProcess",
-            sub_type="TERMINATE",
-            container_id=self.container.id,
-            process_type=service_instance._proc_type, process_name=service_instance._proc_name,
-            state=ProcessStateEnum.TERMINATE)
-
-        self._call_proc_state_changed(service_instance, ProcessStateEnum.TERMINATE)
+        self._call_proc_state_changed(service_instance, ProcessStateEnum.TERMINATED)
 
     def _unregister_process(self, process_id, service_instance):
         # Remove process registration in resource registry
