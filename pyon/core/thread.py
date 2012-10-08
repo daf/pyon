@@ -53,12 +53,16 @@ class PyonThread(object):
         self.proc = None
         self.supervisor = None
 
+        self.ev_exit = Event()
+
     def _pid(self):
         return id(self.proc)
 
     def _spawn(self):
         # Gevent spawn
-        return spawn(self.target, *self.spawn_args, **self.spawn_kwargs)
+        gl = spawn(self.target, *self.spawn_args, **self.spawn_kwargs)
+        gl.link(lambda _: self.ev_exit.set())
+        return gl
 
     def _join(self, timeout=None):
         return self.proc.join(timeout)
@@ -304,7 +308,7 @@ class ThreadManager(object):
         self._shutdown_event.set(True)
         unset = shutdown_or_die(timeout)        # Failsafe in case the following doesn't work
         elapsed = self.join_children(timeout)
-        self.stop()
+        #self.stop()
 
         unset()
         return elapsed
