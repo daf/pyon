@@ -350,7 +350,7 @@ class PyonSelectConnection(SelectConnection):
 
         # used all of our channels
         if len(available) == 0:
-            raise NoFreeChannels()
+            raise NoFreeChannels("No free channels: Max %d, used %d, bad %d" % (limit, len(self._channels), len(self._bad_channel_numbers)))
 
         # get lowest available!
         ch_num = min(available)
