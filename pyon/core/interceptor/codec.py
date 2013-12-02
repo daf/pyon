@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from pyon.core.interceptor.interceptor import Interceptor
 from pyon.core.bootstrap import get_obj_registry
 from pyon.core.object import IonObjectDeserializer, IonObjectSerializer, IonObjectBlameDeserializer, IonObjectBlameSerializer
