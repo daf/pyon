@@ -445,11 +445,9 @@ class IonObjectSerializer(IonObjectSerializationBase):
 
     Used by the codec interceptor and when being written to CouchDB.
     """
-
-
     def _transform(self, obj):
         if isinstance(obj, IonObjectBase):
-            res = dict((k, v) for k, v in obj.__dict__.iteritems() if k in obj._schema or k in built_in_attrs)
+            res = {k:v for k, v in obj.__dict__.iteritems() if k in obj._schema or k in built_in_attrs}
             if not 'type_' in res:
                 res['type_'] = obj._get_type()
             return res
