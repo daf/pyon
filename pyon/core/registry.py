@@ -174,7 +174,7 @@ class IonObjectRegistry(object):
                     tmpdict[key] = self.new(clzz._schema[key]["type"], tmpdict[key])
 
             # Override values with kwargs (do not assume IonObjects in kwargs)
-            tmpdict.update(deepcopy(kwargs))
+            tmpdict.update(kwargs)
             new_values = deepcopy(tmpdict)   # Anything nested/IonObject could be in here - no risk
             obj = clzz(**new_values)
         else:
