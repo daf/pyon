@@ -19,7 +19,7 @@ class CodecInterceptor(Interceptor):
         log.debug("CodecInterceptor.outgoing: %s", invocation)
 
         #log.debug("Payload, pre-transform: %s", invocation.message)
-        #invocation.message = self._io_serializer.serialize(invocation.message)
+        invocation.message = self._io_serializer.serialize(invocation.message)
         #log.debug("Payload, post-transform: %s", invocation.message)
 
         return invocation
@@ -30,7 +30,7 @@ class CodecInterceptor(Interceptor):
         #payload = invocation.message
         #log.debug("Payload, pre-transform: %s", payload)
         #
-        #invocation.message = self._io_deserializer.deserialize(payload)
+        invocation.message = self._io_deserializer.deserialize(payload)
         #log.debug("Payload, post-transform: %s", invocation.message)
 
         return invocation

@@ -33,17 +33,16 @@ obj_registry = None
 def decode_ion(obj):
     """msgpack object hook to decode granule (numpy) types and IonObjects"""
 
-    if "type_" in obj:
-        global obj_registry
-        if obj_registry is None:
-            obj_registry = get_obj_registry()
-
-        ion_obj = obj_registry.new(obj["type_"])
-        for k, v in obj.iteritems():
-            if k != "type_":
-                setattr(ion_obj, k, v)
-        return ion_obj
-
+    #if "type_" in obj:
+    #    global obj_registry
+    #    if obj_registry is None:
+    #        obj_registry = get_obj_registry()
+    #
+    #    ion_obj = obj_registry.new(obj["type_"])
+    #    for k, v in obj.iteritems():
+    #        if k != "type_":
+    #            setattr(ion_obj, k, v)
+    #    return ion_obj
     if 't' not in obj:
         return obj
 
@@ -79,9 +78,9 @@ def encode_ion(obj):
     msgpack object hook to encode granule/numpy types and IonObjects
     """
 
-    if isinstance(obj, IonObjectBase):
-        # There must be a type_ in here
-        return obj.__dict__
+    #if isinstance(obj, IonObjectBase):
+    #    # There must be a type_ in here
+    #    return obj.__dict__
 
     if isinstance(obj, list):
         return {'t': EncodeTypes.LIST, 'o': tuple(obj)}
