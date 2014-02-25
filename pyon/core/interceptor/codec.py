@@ -29,7 +29,6 @@ class CodecInterceptor(Interceptor):
 
         payload = invocation.message
         #log.debug("Payload, pre-transform: %s", payload)
-
         invocation.message = self._io_deserializer.deserialize(payload)
         #log.debug("Payload, post-transform: %s", invocation.message)
 
