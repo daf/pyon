@@ -456,7 +456,15 @@ class IonObjectSerializer(IonObjectSerializationBase):
 
         return obj
 
-    def serialize2(self, obj, replace=False):
+    serialize = IonObjectSerializationBase.operate
+
+class IonObjectSerializer2(IonObjectSerializationBase):
+    """
+    Michael's serialize2
+    doesn't call walk
+    """
+
+    def serialize(self, obj, replace=False):
         if isinstance(obj, IonObjectBase):
             res = {k: v for k, v in obj.__dict__.iteritems() if k in obj._schema or k in built_in_attrs}
             res['type_'] = obj._get_type()
@@ -464,18 +472,15 @@ class IonObjectSerializer(IonObjectSerializationBase):
 
         if isinstance(obj, dict):
             if replace or has_ion_object(obj):
-                return {k: self.serialize2(v, True) for k, v in obj.iteritems()}
+                return {k: self.serialize(v, True) for k, v in obj.iteritems()}
             else:
                 return obj
         elif hasattr(obj, '__iter__'):
             if replace or has_ion_object(obj):
-                return [self.serialize2(v, True) for v in obj]
+                return [self.serialize(v, True) for v in obj]
             else:
                 return obj
         return obj
-
-    #serialize = IonObjectSerializationBase.operate
-    serialize = serialize2
 
 
 class IonObjectBlameSerializer(IonObjectSerializer):
@@ -531,7 +536,19 @@ class IonObjectDeserializer(IonObjectSerializationBase):
 
         return obj
 
-    def deserialize2(self, obj, replace=False):
+    deserialize = IonObjectSerializationBase.operate
+
+class IonObjectDeserializer2(IonObjectSerializationBase):
+    """
+    Michael's deserialize2
+    no walk
+    """
+    def __init__(self, transform_method=None, obj_registry=None, **kwargs):
+        assert obj_registry
+        self._obj_registry = obj_registry
+        IonObjectSerializationBase.__init__(self, transform_method=transform_method)
+
+    def deserialize(self, obj, replace=False):
         if isinstance(obj, dict) and "type_" in obj:
             otype = obj['type_'].encode('ascii')   # Correct?
 
@@ -552,12 +569,12 @@ class IonObjectDeserializer(IonObjectSerializationBase):
 
         if isinstance(obj, dict):
             if replace or has_ion_object2(obj):
-                return {k: self.deserialize2(v, True) for k, v in obj.iteritems()}
+                return {k: self.deserialize(v, True) for k, v in obj.iteritems()}
             else:
                 return obj
         elif hasattr(obj, '__iter__'):
             if replace or has_ion_object2(obj):
-                return [self.deserialize2(v, True) for v in obj]
+                return [self.deserialize(v, True) for v in obj]
             else:
                 return obj
         elif isinstance(obj, IonObjectBase):
@@ -566,14 +583,11 @@ class IonObjectDeserializer(IonObjectSerializationBase):
 
             for fieldname in set_fields:
                 fieldval = getattr(obj, fieldname)
-                newfo = self.deserialize2(fieldval)
+                newfo = self.deserialize(fieldval)
                 if newfo != fieldval:
                     setattr(obj, fieldname, newfo)   # Careful: setattr may be doing validation
             return obj
         return obj
-
-    deserialize = IonObjectSerializationBase.operate
-    #deserialize = deserialize2
 
 
 class IonObjectBlameDeserializer(IonObjectDeserializer):

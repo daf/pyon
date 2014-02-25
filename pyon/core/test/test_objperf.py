@@ -10,9 +10,9 @@ import json
 
 from pyon.util.unit_test import IonUnitTestCase
 from pyon.core.bootstrap import get_obj_registry
-from pyon.core.object import IonObjectBase, built_in_attrs
+from pyon.core.object import IonObjectBase, built_in_attrs, IonObjectSerializer, IonObjectSerializer2, IonObjectDeserializer, IonObjectDeserializer2
 from pyon.util.log import log
-
+from interface.objects import Resource, DataProduct
 
 def create_test_object(depth=3, breadth=10, do_list=True, do_ion=False, uvals=False, ukeys=False):
     import random, string
@@ -38,7 +38,10 @@ def create_test_object(depth=3, breadth=10, do_list=True, do_ion=False, uvals=Fa
                         key2 = unicode(key2 + u'\u20ac')
                     res_dict[key2] = create_test_col(level-1, list)
                 if do_ion:
-                    pass
+                    key3 = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(random.randint(5, 10)))
+                    if ukeys and random.random() > 0.5:
+                        key3 = unicode(key3 + u'\u20ac')
+                    res_dict[key3] = create_test_col(level-1, "IonObject")
             return res_dict
         elif ot == list:
             res_list = []
@@ -47,15 +50,23 @@ def create_test_object(depth=3, breadth=10, do_list=True, do_ion=False, uvals=Fa
                 if do_list:
                     res_list.append(create_test_col(level-1, list))
                 if do_ion:
-                    pass
+                    res_list.append(create_test_col(level-1, "IonObject"))
             return res_list
         elif ot == "IonObject":
-            res_obj = Resource(name="TestObject %s.%s" % (level, random.randint(1000, 9999)))
+            res_obj = DataProduct(name="TestObject %s.%s" % (level, random.randint(1000, 9999)))
             for i in xrange(breadth / num_kinds):
-                pass
+                key1 = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(random.randint(5, 10)))
+                if ukeys and random.random() > 0.5:
+                    key1 = unicode(key1 + u'\u20ac')
+
+                res_obj.temporal_domain[key1] = create_test_col(level-1, "IonObject")
+
+                if do_list:
+                    res_obj.descriptors.append(create_test_col(level-1, "IonObject"))
+
             return res_obj
 
-    test_obj = create_test_col(depth, dict)
+    test_obj = create_test_col(depth, list)
     return test_obj
 
 
@@ -246,3 +257,58 @@ class ObjectPerfTest(IonUnitTestCase):
         #res_obj1 = Resource(name="Test resource1")
         #test_obj = create_test_object(2, 30, do_list=True, uvals=True, ukeys=True)
         #res_obj1.addl["some"] = test_obj
+
+    def test_serializers(self):
+        obj_registry = get_obj_registry()
+
+        from interface.objects import Resource, DataProduct
+        res_obj = DataProduct(name="Test resource")
+        #obj = [res_obj, "Some str", {}, False]
+        obj = create_test_object(3, 10, do_list=False, do_ion=True)
+
+        log.info("")
+
+        iters = 1000
+
+        ser1 = IonObjectSerializer()
+        ser2 = IonObjectSerializer2()
+
+        t1 = time.time()
+        for _ in xrange(iters):
+            s1 = ser1.serialize(obj)
+        t2 = time.time()
+        log.info("Original IonObjectSerializer %s", (t2-t1)/iters)
+
+        t1 = time.time()
+        for _ in xrange(iters):
+            s2 = ser2.serialize(obj)
+        t2 = time.time()
+        log.info("Modified IonObjectSerializer %s", (t2-t1)/iters)
+
+        #log.info(json.dumps(s1))
+        #log.info(json.dumps(s2))
+
+
+        # deser
+
+        deser1 = IonObjectDeserializer(obj_registry=obj_registry)
+        deser2 = IonObjectDeserializer2(obj_registry=obj_registry)
+
+        t1 = time.time()
+        for _ in xrange(iters):
+            d1 = deser1.deserialize(s1)
+        t2 = time.time()
+        log.info("Orig deser %s", (t2-t1)/iters)
+
+        t1 = time.time()
+        for _ in xrange(iters):
+            d2 = deser2.deserialize(s2)
+        t2 = time.time()
+        log.info("Modified deser %s", (t2-t1)/iters)
+
+        #import pprint
+        #log.info(pprint.pformat(d1))
+
+
+
+
